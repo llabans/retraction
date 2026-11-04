@@ -15,7 +15,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent / "manuscrito"
 QMD = ROOT / "CODE" / "manuscript.qmd"
 BIB = ROOT / "REF" / "references.bib"
-DATA = ROOT / "DATA" / "Base retraccion 5 (cuartiles revisados).dta"
+DATA = ROOT / "DATA" / "Base retraccion 6.dta"
 BUILD = ROOT / "build"
 
 results = []
@@ -127,6 +127,10 @@ def static_tests():
           "Appendix S1" in supp and "TITLE-ABS-KEY" in supp and '"notice of retraction"' in supp, "")
     elig = section(txt, "Eligibility criteria", "##") or ""
     check("A19", "Elegibilidad define el manejo de expressions of concern", "expressions of concern were" in elig.lower(), "")
+    elig2 = section(txt, "Eligibility criteria", "##") or ""
+    check("A21", "Elegibilidad con definición OMS/ICMJE y regla de retracción y reemplazo",
+          "World Health Organization" in elig2 and "retractions and replacements" in elig2.lower(), "")
+    check("A22", "Manuscrito usa la base 6", 'Base retraccion 6.dta' in txt and 'Base retraccion 5' not in txt, "")
     check("A17", "Sin install.packages() en el código", "install.packages(" not in txt, "")
 
 
@@ -164,6 +168,8 @@ def render_tests():
           "Q3–Q4" in docx_text and "median (IQR)" in docx_text, "")
     check("A20", "Word con numeración de líneas y doble espacio",
           "w:lnNumType" in xml and 'w:line="480"' in styles, "")
+    check("A23", "Renderizado con n=112 y sensibilidad solo ECA (n=109)",
+          f"included {e['n']} " in plain and "109 randomised" in plain, e['n'])
     fab_med = f"{e['fab_median']}"
     check("A16b", "Mediana por motivo renderizada (fabricación)", f"{fab_med} years" in plain, fab_med)
     unresolved = re.findall(r"\?@[\w-]+|@fig-|@tbl-", plain)

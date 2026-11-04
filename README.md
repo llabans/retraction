@@ -11,6 +11,8 @@ Este repositorio es público y contiene **solo código y documentación de méto
 |---|---|
 | `manuscrito/CODE/manuscript_analysis.R` | Todo el código R del manuscrito (tablas, figuras y objetos que se citan en el texto), extraído del `.qmd` en el mismo orden |
 | `manuscrito/CODE/00_cambios_raw_a_base5.R` | Registro de cambios entre la base RAW y la base 5 (cuartiles revisados) |
+| `manuscrito/CODE/01_base6.R` | Construye la base de análisis (base 6) desde la base 5: exclusiones, correcciones y marca de ensayos no aleatorizados. Las decisiones registro por registro se leen de `DATA/decisiones_base6.R` (privado) |
+| `manuscrito/CODE/02_mapa_estatico.R` | Figura 3: mapa estático por país de realización (paquete `maps`, sin descargas) |
 | `manuscrito/CODE/paquetes_R.txt` | Paquetes de R y versiones probadas |
 | `tests/` | Pruebas de aceptación del manuscrito (`test_manuscrito.py`) y render sin Quarto (`render.py`: knitr + pandoc) |
 | `verificacion/` | Recálculo independiente de las cifras en Python (pandas + pyreadstat) y emparejamiento con PMID/DOI |
@@ -22,7 +24,8 @@ Este repositorio es público y contiene **solo código y documentación de méto
 
 No se publican en este repositorio:
 
-- La base de ensayos (`manuscrito/DATA/*.dta`), la base RAW y los identificadores (PMID/DOI) de los registros.
+- La base de ensayos (`manuscrito/DATA/*.dta`), la base RAW, los identificadores (PMID/DOI) de los registros y las
+  decisiones registro por registro (`manuscrito/DATA/decisiones_base6.R`).
 - Los exports de las búsquedas (PubMed, Scopus, RIS) y las listas de PMID de cada estrategia.
 - El tamizaje registro por registro y sus decisiones (`replicacion_busqueda/datos/`).
 - El texto del manuscrito (`manuscript.qmd`, Word), las tablas y las figuras generadas desde los datos.
@@ -37,7 +40,11 @@ La única fuente externa es pública: Retraction Watch Database (distribución a
 
 ```bash
 # R: desde la carpeta manuscrito/ (ahí está retraction.Rproj, que here::here() usa como raíz)
-cd manuscrito && Rscript CODE/manuscript_analysis.R && cd ..
+cd manuscrito
+Rscript CODE/01_base6.R            # base 6 y registro de cambios
+Rscript CODE/02_mapa_estatico.R    # figura 3
+Rscript CODE/manuscript_analysis.R # tablas, figuras y objetos del texto
+cd ..
 
 # Recálculo independiente en Python
 pip install pandas pyreadstat

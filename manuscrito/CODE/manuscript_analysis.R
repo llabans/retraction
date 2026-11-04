@@ -4,10 +4,12 @@
 # El texto del manuscrito y las cifras en línea (`r ...`) no se publican aquí. El .qmd completo y los datos
 # quedan fuera del repositorio (ver README.md, sección "Datos").
 #
-# Entrada esperada (no incluida): manuscrito/DATA/Base retraccion 5 (cuartiles revisados).dta
+# Entrada esperada (no incluida): manuscrito/DATA/Base retraccion 6.dta (la genera CODE/01_base6.R)
+#                   y manuscrito/TABLES/registro_base6.csv (también de 01_base6.R)
 # Salidas: tablas y figuras en manuscrito/TABLES/ y manuscrito/FIGURES/ (ignoradas por git)
 # Ejecutar desde el proyecto manuscrito/retraction.Rproj (las rutas usan here::here()).
 # Paquetes: ver manuscrito/CODE/paquetes_R.txt
+
 
 ## ---- setup ----  (opciones: setup, include=FALSE)
 library(tidyverse)
@@ -20,7 +22,7 @@ library(glue)
 library(ggrepel)
 library(knitr)
 
-data <- read_dta(here("DATA", "Base retraccion 5 (cuartiles revisados).dta")) %>%
+data <- read_dta(here("DATA", "Base retraccion 6.dta")) %>%
   mutate(across(where(is.labelled), as_factor)) %>%
   mutate(
     cuartil = paste0("Q", quartila_retrac),
@@ -32,9 +34,11 @@ data <- read_dta(here("DATA", "Base retraccion 5 (cuartiles revisados).dta")) %>
                 ~ fct_recode(.x, Europe = "Europa", Multinational = "Multinacional", `Not explicit` = "No explicito")))
 
 # Objects used in the abstract and in the results text.
-# Percentages of reasons use the number of trials (n = 120) as denominator.
+# Percentages of reasons use the number of included trials as denominator.
 n_total <- nrow(data)
-pct <- function(x, d = n_total) sprintf("%.1f", 100 * x / d)
+# percentages are rounded half up (R's default rounds 56.25 down to 56.2)
+r1 <- function(v) round(v + 1e-9, 1)
+pct <- function(x, d = n_total) sprintf("%.1f", r1(100 * x / d))
 n_si <- function(v) sum(v == "si", na.rm = TRUE)
 
 period_labels <- c("2003-2007", "2008-2012", "2013-2017", "2018-2023")
@@ -84,6 +88,20 @@ max_before_2022 <- max(n_year[as.character(2003:2021)])
 n_before18 <- sum(data$año_retraccion < 2018)
 low_before18 <- sum(data$año_retraccion < 2018 & data$cuartil != "Q1")
 low_recent <- sum(data$año_retraccion >= 2018 & data$cuartil != "Q1")
+
+# Selection after full-text verification (TABLES/registro_base6.csv, written by CODE/01_base6.R)
+registro <- read_csv(here("TABLES", "registro_base6.csv"), show_col_types = FALSE)
+excl <- registro %>% filter(cambio == "excluido")
+n_excl <- nrow(excl); n_excl_g <- function(g) sum(excl$grupo == g)
+n_notices_assessed <- 119
+n_articles_assessed <- n_total + n_excl
+n_notices_incl <- n_notices_assessed - n_excl  # each excluded article had its own notice
+
+# Sensitivity analysis restricted to randomised controlled trials
+rct <- data$ensayo_aleatorizado == 1
+n_rct <- sum(rct)
+pct_rct <- function(x) sprintf("%.1f", r1(100 * sum(x & rct, na.rm = TRUE) / n_rct))
+t_med_rct <- sprintf("%g", median(t[rct]))
 
 # Time to retraction by reason, and trials by the two repeat authors (Fujii, Sato)
 t_reason <- function(v) sprintf("%g years (IQR %g–%g)", median(t[v]),
@@ -155,17 +173,23 @@ digraph strobe_flow {
      color = '#D32F2F',
      height = 1.2]
 
-  F [label = 'Retraction notices assessed for full-text eligibility\\n(n = 119)',
+  F [label = 'Retraction notices assessed in full text\\n(n = 119; 121 retracted articles,\\ntwo notices retracted two articles each)',
      fillcolor = '#C8E6C9',
      color = '#2E7D32']
 
-  G [label = 'Retracted articles included in\\nbibliometric analysis\\n(n = 120)\\n(due to one retraction notice retracted two articles)',
+  X [label = 'Articles excluded after verification\\n(n = 9)\\n\\nNot a clinical trial in humans (n = 6)\\nSecondary publication without trial outcomes (n = 1)\\nRetraction and replacement (n = 2)',
+     fillcolor = '#FFEBEE',
+     color = '#D32F2F',
+     height = 1.2]
+
+  G [label = 'Retracted clinical trials included\\nin the analysis\\n(n = 112, from 110 notices)',
      fillcolor = '#A5D6A7',
      color = '#1B5E20']
 
   /*------  Hierarchical layout  ------*/
   {rank = same; A; B;}
   {rank = same; D; E;}
+  {rank = same; F; X;}
 
   /*------  Connections  ------*/
   A -> C
@@ -174,6 +198,7 @@ digraph strobe_flow {
   D -> F
   D -> E [constraint = false]
   F -> G
+  F -> X [constraint = false]
 
   /*------  Duplicate removal indication  ------*/
   dup [label = 'Duplicates removed\\n(n = 22)',
@@ -212,7 +237,7 @@ total_n <- nrow(data_t1)
 quartile_labels <- c("Q1", "Q2", "Q3–Q4")
 quartile_n <- sapply(quartile_labels, function(q) sum(data_t1$cuartil == q, na.rm = TRUE))
 quartile_n_total <- sum(quartile_n)
-quartile_headers <- sprintf("%s\nn=%d (%.1f%%)", quartile_labels, quartile_n, 100 * quartile_n / quartile_n_total)
+quartile_headers <- sprintf("%s\nn=%d (%.1f%%)", quartile_labels, quartile_n, r1(100 * quartile_n / quartile_n_total))
 
 # 1. Periodo de retracción (por año de retracción, no de publicación)
 period_labels <- c("2003-2007", "2008-2012", "2013-2017", "2018-2023")
@@ -231,11 +256,11 @@ period_tbl <- data_t1 %>%
   mutate(row_total = sum(n)) %>%
   ungroup() %>%
   filter(row_total > 0) %>%
-  mutate(percent = ifelse(row_total > 0, round(100 * n / row_total, 1), 0)) %>%
+  mutate(percent = ifelse(row_total > 0, r1(100 * n / row_total), 0)) %>%
   mutate(n_percent = sprintf("%d (%.1f)", n, percent)) %>%
   select(periodo_retraccion, cuartil, n_percent, row_total) %>%
   pivot_wider(names_from = cuartil, values_from = n_percent) %>%
-  mutate(Global = sprintf("%d (%.1f)", row_total, 100 * row_total / total_n)) %>%
+  mutate(Global = sprintf("%d (%.1f)", row_total, r1(100 * row_total / total_n))) %>%
   select(periodo_retraccion, Global, all_of(quartile_labels)) %>%
   rename(Variable = periodo_retraccion)
 
@@ -260,11 +285,11 @@ cont_tbl <- data_t1 %>%
   mutate(row_total = sum(n)) %>%
   ungroup() %>%
   filter(row_total > 0) %>%
-  mutate(percent = ifelse(row_total > 0, round(100 * n / row_total, 1), 0)) %>%
+  mutate(percent = ifelse(row_total > 0, r1(100 * n / row_total), 0)) %>%
   mutate(n_percent = sprintf("%d (%.1f)", n, percent)) %>%
   select(continente_ensayo, cuartil, n_percent, row_total) %>%
   pivot_wider(names_from = cuartil, values_from = n_percent) %>%
-  mutate(Global = sprintf("%d (%.1f)", row_total, 100 * row_total / total_n)) %>%
+  mutate(Global = sprintf("%d (%.1f)", row_total, r1(100 * row_total / total_n))) %>%
   select(continente_ensayo, Global, all_of(quartile_labels)) %>%
   rename(Variable = continente_ensayo)
 
@@ -279,11 +304,11 @@ cont1_tbl <- data_t1 %>%
   mutate(row_total = sum(n)) %>%
   ungroup() %>%
   filter(row_total > 0) %>%
-  mutate(percent = ifelse(row_total > 0, round(100 * n / row_total, 1), 0)) %>%
+  mutate(percent = ifelse(row_total > 0, r1(100 * n / row_total), 0)) %>%
   mutate(n_percent = sprintf("%d (%.1f)", n, percent)) %>%
   select(continente_1er_autor, cuartil, n_percent, row_total) %>%
   pivot_wider(names_from = cuartil, values_from = n_percent) %>%
-  mutate(Global = sprintf("%d (%.1f)", row_total, 100 * row_total / total_n)) %>%
+  mutate(Global = sprintf("%d (%.1f)", row_total, r1(100 * row_total / total_n))) %>%
   select(continente_1er_autor, Global, all_of(quartile_labels)) %>%
   rename(Variable = continente_1er_autor)
 
@@ -304,11 +329,11 @@ reasons_tbl <- lapply(seq_along(det_reasons_vars), function(i) {
     mutate(row_total = sum(n)) %>%
     ungroup() %>%
     filter(row_total > 0) %>%
-    mutate(percent = ifelse(row_total > 0, round(100 * n / row_total, 1), 0)) %>%
+    mutate(percent = ifelse(row_total > 0, r1(100 * n / row_total), 0)) %>%
     mutate(n_percent = sprintf("%d (%.1f)", n, percent)) %>%
     select(cuartil, n_percent, row_total) %>%
     pivot_wider(names_from = cuartil, values_from = n_percent) %>%
-    mutate(Global = sprintf("%d (%.1f)", unique(row_total), 100 * unique(row_total) / total_n)) %>%
+    mutate(Global = sprintf("%d (%.1f)", unique(row_total), r1(100 * unique(row_total) / total_n))) %>%
     mutate(Variable = label) %>%
     select(Variable, Global, all_of(quartile_labels))
   temp
@@ -331,7 +356,7 @@ table1 <- bind_rows(
 ft1 <- flextable(table1) %>%
   set_header_labels(
     Variable = "Characteristics",
-    Global = "Retracted clinical trials (n=120)",
+    Global = sprintf("Retracted clinical trials (n=%d)", total_n),
     Q1 = quartile_headers[1],
     Q2 = quartile_headers[2],
     `Q3–Q4` = quartile_headers[3]
@@ -345,7 +370,7 @@ ft1 <- flextable(table1) %>%
   bold(part = "header") %>%
   bold(i = ~is.na(Global), part = "body") %>%
   italic(i = ~is.na(Global), part = "body") %>%
-  add_footer_lines("Global column: n (% of all trials, n=120). Quartile columns: n (row %). Q3 and Q4 are grouped because only one trial was in a Q4 journal. *Time from publication to retraction in years. A trial could have more than one reason for retraction, so reasons do not add up to the total; subcategories (indented) are not mutually exclusive.") %>%
+  add_footer_lines(paste0("Global column: n (% of all trials, n=", total_n, "). Quartile columns: n (row %). Q3 and Q4 are grouped because only ", sum(data$cuartil == "Q4"), " trial(s) were in a Q4 journal. *Time from publication to retraction in years. A trial could have more than one reason for retraction, so reasons do not add up to the total; subcategories (indented) are not mutually exclusive.")) %>%
   fontsize(size = 8, part = "footer") %>%
   italic(part = "footer")
 
@@ -469,7 +494,7 @@ ggsave(
 
 ## ---- fig-retract_fig2 ----
 #| label: fig-retract_fig2
-#| fig-cap: "Retracted clinical trials by year of retraction and SCImago quartile of the journal, 2003–2023 (n=120). 2023 includes retractions up to 7 August."
+#| fig-cap: !expr paste0("Retracted clinical trials by year of retraction and SCImago quartile of the journal, 2003–2023 (n=", n_total, "). 2023 includes retractions up to 7 August.")
 #| fig-width: 12
 #| fig-height: 8
 #| fig-align: center
@@ -480,7 +505,7 @@ ggsave(
 knitr::include_graphics(here::here('FIGURES', 'line_bar_stacked.png'))
 
 ## ---- world_map_animation ----  (opciones: world_map_animation)
-data <- read_dta(here("DATA", "Base retraccion 5 (cuartiles revisados).dta")) %>%
+data <- read_dta(here("DATA", "Base retraccion 6.dta")) %>%
     mutate(across(where(is.labelled), as_factor)) %>%
     # Create quartile variable with appropriate labels
     mutate(cuartil = case_when(
@@ -721,7 +746,7 @@ row_totals <- table_s1 %>%
 table_s1 <- table_s1 %>%
   left_join(row_totals, by = "reason") %>%
   mutate(
-    percent = ifelse(total > 0, round(100 * n / total, 1), 0),
+    percent = ifelse(total > 0, r1(100 * n / total), 0),
     n_percent = sprintf("%d (%.1f)", n, percent)
   ) %>%
   select(reason, period, n_percent) %>%
@@ -730,7 +755,7 @@ table_s1 <- table_s1 %>%
 
 # Encabezados de periodo con n
 period_n <- sapply(period_labels, function(p) sum(data2$period == p, na.rm = TRUE))
-period_headers <- sprintf("%s\nn=%d (%.1f%%)", period_labels, period_n, 100 * period_n / sum(period_n))
+period_headers <- sprintf("%s\nn=%d (%.1f%%)", period_labels, period_n, r1(100 * period_n / sum(period_n)))
 
 ft_s1 <- flextable(table_s1) %>%
   set_header_labels(
@@ -757,7 +782,7 @@ saveRDS(ft_s1, file = here::here('TABLES', 'Table_S1_reasons_by_period.rds'))
 
 ## ---- tbl_s1_reasons_by_period ----  (opciones: tbl_s1_reasons_by_period)
 #| label: tbl-s1
-#| tbl-cap: "Table S1. Reasons for retraction of clinical trials by period of retraction (n=120). A trial could have more than one reason."
+#| tbl-cap: !expr paste0("Table S1. Reasons for retraction of clinical trials by period of retraction (n=", n_total, "). A trial could have more than one reason.")
 
 ft_s1 <- readRDS(here::here('TABLES', 'Table_S1_reasons_by_period.rds'))
 ft_s1  # Solo mostrar si es flextable, no imprimir tibbles/data.frames
