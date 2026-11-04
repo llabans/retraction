@@ -1,0 +1,21 @@
+import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from load import *
+pd.set_option('display.width',250); pd.set_option('display.max_colwidth',80)
+A,ma=load('DATA/Base retraccion 5 (cuartiles revisados).dta')
+vl=ma.value_labels
+print(pd.crosstab(A.pais_eca, A.continente_ensayo.map(vl['continente_ensayo'])).to_string())
+print(pd.crosstab(A.pais_primer_autor, A.continente_1er_autor.map(vl['continente_1er_autor'])).to_string())
+for c in ['pais_eca','pais_primer_autor','revisor','titulo','autores','revista']:
+    s=A[c]; print(c,'leading/trailing ws:', (s!=s.str.strip()).sum(), 'empty:',(s.str.strip()=='').sum())
+print('titulo values', A.titulo.str.strip().str.lower().value_counts().head(8).to_dict())
+print('n unique titles', A.titulo.nunique())
+key=A.autores.str.strip().str.lower()+'|'+A.revista.str.strip().str.lower()+'|'+A.año_publicacion.astype(str)
+dup=A[key.duplicated(keep=False)].sort_values('autores')
+print('dup autores+revista+año:'); print(dup[['id','autores','revista','año_publicacion','año_retraccion','titulo']].to_string())
+key2=A.autores.str.strip().str.lower()+'|'+A.revista.str.strip().str.lower()
+print('dup autores+revista (any year):', key2.duplicated(keep=False).sum())
+print(A[key2.duplicated(keep=False)].sort_values('autores')[['id','autores','revista','año_publicacion','año_retraccion']].to_string())
+print('ids', sorted(A.id.astype(int).tolist()))
+print('pub<2003', A[A.año_publicacion<2003][['id','año_publicacion','año_retraccion']].to_string())
+print('t=0', (A.tiempo_retracion==0).sum())
+print('revisor empty', A[A.revisor.str.strip()==''][['id','autores']])

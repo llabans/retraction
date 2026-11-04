@@ -1,0 +1,23 @@
+# Paquetes de R que usa CODE/manuscript.qmd (P-63)
+# Versiones del contenedor donde se probó el render el 2026-11-04 (R version 4.3.3 (2024-02-29)).
+# En el equipo de los autores, guardar sessionInfo() tras renderizar con Quarto, o crear un renv.lock.
+tidyverse       2.0.0
+dplyr           1.1.4
+tidyr           1.3.1
+haven           2.5.4
+labelled        2.12.0
+here            1.0.1
+officer         0.6.4
+flextable       0.9.4
+glue            1.7.0
+ggrepel         0.9.5
+knitr           1.45
+sf              1.0.15
+rsvg            2.6.0
+DiagrammeR      no instalado en el contenedor
+DiagrammeRsvg   no instalado en el contenedor
+rnaturalearth   no instalado en el contenedor
+countrycode     no instalado en el contenedor
+gganimate       no instalado en el contenedor
+gifski          no instalado en el contenedor
+av              no instalado en el contenedor
