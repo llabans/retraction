@@ -1,0 +1,65 @@
+# =====================================================================
+# Este repositorio es PÚBLICO y contiene SOLO código.
+# Ningún dato, export de búsqueda, identificador de registros (PMID/DOI),
+# manuscrito, tabla o figura generada desde los datos debe subirse.
+# =====================================================================
+
+# --- Carpetas de datos y salidas (en cualquier nivel) ---
+DATA/
+RAW/
+SOURCE/
+TABLES/
+FIGURES/
+build/
+datos/
+ris/
+archivo/
+_files/
+*_files/
+
+# --- Formatos de datos ---
+*.dta
+*.sav
+*.rds
+*.RData
+*.rda
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.ris
+*.nbib
+*.bib
+*.json
+*.txt
+data2_*
+
+# --- Manuscrito y documentos (texto no publicado) ---
+*.qmd
+*.Rmd
+*.docx
+*.doc
+*.pdf
+*.pptx
+
+# --- Imágenes generadas desde los datos ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.tif
+*.tiff
+
+# --- Excepciones: archivos de código o configuración que sí se publican ---
+!manuscrito/CODE/paquetes_R.txt
+!requirements.txt
+
+# --- R / Python / sistema ---
+.Rproj.user/
+.Rhistory
+.Ruserdata
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
